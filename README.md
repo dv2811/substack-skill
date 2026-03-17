@@ -14,6 +14,7 @@ cd entext-research-tools
 # Install a tool
 ./tool_build.sh <tool-name>
 ```
+Then copy tool-specific SKILL.md to target AI tool's skills directory
 
 ## Project Structure
 
