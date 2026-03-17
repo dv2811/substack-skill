@@ -15,27 +15,6 @@ cd entext-research-tools
 ./tool_build.sh <tool-name>
 ```
 
-### Install as AI Skill
-
-**Claude Code:**
-```bash
-claude plugin install dv2811/entext-research-tools
-```
-
-**Qwen Code:**
-```bash
-qwen extensions install dv2811/entext-research-tools
-```
-
-**Manual (copy skill directly):**
-```bash
-# Claude Code
-cp skills/<tool-name>/SKILL.md ~/.claude/skills/<tool-name>/SKILL.md
-
-# Qwen Code
-cp skills/<tool-name>/SKILL.md ~/.qwen/skills/<tool-name>/SKILL.md
-```
-
 ## Project Structure
 
 ```
