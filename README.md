@@ -81,7 +81,29 @@ substack search -query "AI" -mode top
 
 ### CLI Tool
 
-**Using the build script (recommended):**
+**Using Makefile (recommended for development):**
+
+```bash
+# Build for current platform
+make build
+
+# Full setup (build + install + auth session)
+make setup
+
+# Install binary only (no session setup)
+make install
+
+# Uninstall binary
+make uninstall
+
+# Remove binary + session file
+make uninstall-all
+
+# Remove session file only (for security)
+make clean-session
+```
+
+**Using the build script:**
 
 ```bash
 # From project root
