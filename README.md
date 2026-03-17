@@ -1,6 +1,6 @@
-# entext-research-tool
+# Entext Research Tool
 
-Go-based tools for accessing external content platforms.
+This repository contains source codes for tools used by Entext Research to access subscriptions, performn searches and organize resources.
 
 ## Manual Installation
 
