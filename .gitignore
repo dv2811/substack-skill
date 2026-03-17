@@ -13,6 +13,8 @@ vendor/
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
 
 # Session files (contains auth tokens - never commit)
 session.json

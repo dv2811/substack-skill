@@ -1,7 +1,4 @@
-// Substack CLI tools - Command-line access to Substack reader functionality
-// Usage: substack <command> [flags]
 package main
-
 import (
 	"encoding/json"
 	"flag"
@@ -10,7 +7,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
-
 	"entext-applications/internal/substack"
 )
 
@@ -22,7 +18,6 @@ func getSessionFile() (string, error) {
 	}
 
 	var configDir string
-
 	// XDG Base Directory Specification
 	if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
 		configDir = filepath.Join(xdgConfig, "substack-reader")
@@ -34,7 +29,6 @@ func getSessionFile() (string, error) {
 		}
 		configDir = filepath.Join(home, ".config", "substack-reader")
 	}
-
 	return filepath.Join(configDir, "session.json"), nil
 }
 
@@ -55,8 +49,6 @@ func saveSession(session *substack.Session, sessionFile string) error {
 	if err := os.WriteFile(sessionFile, data, 0600); err != nil {
 		return fmt.Errorf("failed to save session: %w", err)
 	}
-
-	return nil
 }
 
 func main() {
@@ -66,7 +58,6 @@ func main() {
 	}
 
 	command := os.Args[1]
-
 	// Help should work without session
 	if command == "help" || command == "-h" || command == "--help" {
 		printUsage()
@@ -103,7 +94,7 @@ func main() {
 
 	session, err := substack.NewSessionFromFile(sessionFile)
 	if err != nil {
-		// auth command can create a new session
+		// auth command: create or renew a session
 		if command == "auth" {
 			session = &substack.Session{}
 		} else {
@@ -150,12 +141,9 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-func printUsage() {
-	fmt.Println(`Substack CLI Tools
-
+const toolUsage = `
+Substack CLI Tools
 Usage: substack <command> [flags]
-
 Commands:
   inbox                   Get chronological inbox posts
   article                 Get article content by post ID
@@ -172,13 +160,16 @@ Examples:
   substack search -query "technology" -mode all -page 1
   substack search -query "newsletter" -mode subscribed -language en
 
-Run 'substack <command> -h' for more information on a command.`)
+Run 'substack <command> -h' for more information on a command.`
+
+func printUsage() {
+	fmt.Println(toolUsage)
 }
 
 // printJSON prints data as formatted JSON
 func printJSON(data any) {
 	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
+	encoder.SetIndent("", " ")
 	if err := encoder.Encode(data); err != nil {
 		fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
 		os.Exit(1)
