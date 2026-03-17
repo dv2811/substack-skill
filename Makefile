@@ -1,4 +1,6 @@
-.PHONY: help build clean test vet run-auth run-inbox run-search run-article release-all release-linux release-darwin release-windows install uninstall uninstall-all setup clean-session deps tidy
+# Load environment variables from .env file
+-include .env
+export PROJECT_DIR := $(CURDIR)
 
 # Go parameters
 GOCMD=go
@@ -24,91 +26,49 @@ BUILD_WINDOWS=$(BINARY_DIR)/windows/$(BINARY_NAME).exe
 BUILD_LOCAL=$(BINARY_DIR)/$(BINARY_NAME)
 
 # Default target
-help:
+.PHONY: help
+help: ## Print this help message
 	@echo "Substack CLI - Makefile Commands"
 	@echo "================================"
 	@echo ""
-	@echo "Build:"
-	@echo "  make build           - Build for current platform"
-	@echo "  make release-all     - Build for all platforms (linux, darwin, windows)"
-	@echo "  make release-linux   - Build for Linux"
-	@echo "  make release-darwin  - Build for macOS (Intel + Apple Silicon)"
-	@echo "  make release-windows - Build for Windows"
+	@awk -F ':.*## ' '/^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo ""
-	@echo "Install/Setup:"
-	@echo "  make setup           - Run full setup (build + install + auth session)"
-	@echo "  make install         - Build and install binary only"
-	@echo "  make uninstall       - Remove binary from platform-specific path"
-	@echo "  make uninstall-all   - Remove binary + session file + config"
-	@echo "  make clean-session   - Remove only the session file"
-	@echo ""
-	@echo "Test & Lint:"
-	@echo "  make test            - Run tests"
-	@echo "  make vet             - Run go vet"
-	@echo "  make clean           - Clean build artifacts"
-	@echo ""
-	@echo "Run (requires session):"
-	@echo "  make run-auth        - Run auth command"
-	@echo "  make run-inbox       - Run inbox command"
-	@echo "  make run-search      - Run search command"
-	@echo "  make run-article     - Run article command"
-	@echo ""
-	@echo "Dependencies:"
-	@echo "  make deps            - Download dependencies"
-	@echo "  make tidy            - Tidy go.mod"
 
-# Build for current platform
-build: $(BINARY_DIR)
+# Build targets
+.PHONY: build release-all release-linux release-darwin release-windows
+build: $(BINARY_DIR) ## Build for current platform
 	$(GOBUILD) -o $(BUILD_LOCAL) ./$(SRC_DIR)/
 	@echo "✓ Built: $(BUILD_LOCAL)"
 
-# Create bin directory
 $(BINARY_DIR):
 	mkdir -p $(BINARY_DIR)
 	mkdir -p $(BINARY_DIR)/linux
 	mkdir -p $(BINARY_DIR)/darwin
 	mkdir -p $(BINARY_DIR)/windows
 
-# Build for all platforms
-release-all: release-linux release-darwin release-windows
+release-all: release-linux release-darwin release-windows ## Build for all platforms
 	@echo "✓ Built all platforms"
 
-# Build for Linux
-release-linux: $(BINARY_DIR)
+release-linux: $(BINARY_DIR) ## Build for Linux (amd64)
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BUILD_LINUX) ./$(SRC_DIR)/
 	@echo "✓ Built: $(BUILD_LINUX)"
 
-# Build for macOS (Intel & Apple Silicon)
-release-darwin: $(BINARY_DIR)
+release-darwin: $(BINARY_DIR) ## Build for macOS (Intel + Apple Silicon)
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) -o $(BUILD_DARWIN)_amd64 ./$(SRC_DIR)/
 	GOOS=darwin GOARCH=arm64 $(GOBUILD) -o $(BUILD_DARWIN)_arm64 ./$(SRC_DIR)/
 	@echo "✓ Built: $(BUILD_DARWIN)_amd64 and $(BUILD_DARWIN)_arm64"
 
-# Build for Windows
-release-windows: $(BINARY_DIR)
+release-windows: $(BINARY_DIR) ## Build for Windows (amd64)
 	GOOS=windows GOARCH=amd64 $(GOBUILD) -o $(BUILD_WINDOWS) ./$(SRC_DIR)/
 	@echo "✓ Built: $(BUILD_WINDOWS)"
 
-# Run tests
-test:
-	$(GOTEST) -v ./$(INTERNAL_DIR)/...
-
-# Run go vet
-vet:
-	$(GOVET) ./...
-
-# Clean build artifacts
-clean:
-	rm -rf $(BINARY_DIR)
-	@echo "✓ Cleaned build artifacts"
-
-# Full setup (calls setup.sh)
-setup:
+# Install/Setup targets
+.PHONY: setup install uninstall uninstall-all clean-session
+setup: ## Run full setup (build + install + auth session)
 	@echo "Running full setup..."
 	@bash $(SETUP_SCRIPT)
 
-# Install to platform-specific location (matches setup.sh paths)
-install: build
+install: build ## Build and install binary to platform-specific path
 	@echo "Installing to platform-specific location..."
 	@if [ "$$(uname)" = "Darwin" ]; then \
 		mkdir -p $$HOME/bin && cp $(BUILD_LOCAL) $$HOME/bin/$(BINARY_NAME) && chmod +x $$HOME/bin/$(BINARY_NAME); \
@@ -121,8 +81,7 @@ install: build
 		echo "Copy $(BUILD_LOCAL) to your preferred location"; \
 	fi
 
-# Uninstall binary from platform-specific location
-uninstall:
+uninstall: ## Remove binary from platform-specific path
 	@echo "Removing binary from platform-specific location..."
 	@if [ "$$(uname)" = "Darwin" ]; then \
 		if [ -f $$HOME/bin/$(BINARY_NAME) ]; then \
@@ -141,16 +100,14 @@ uninstall:
 		echo "Remove the binary from your installation directory"; \
 	fi
 
-# Uninstall everything (binary + session + config)
-uninstall-all: uninstall clean-session
+uninstall-all: uninstall clean-session ## Remove binary + session file + config
 	@echo ""
 	@echo "Full uninstall complete."
 	@echo "To remove SKILL.md from config directory, run:"
 	@echo "  rm -rf ~/.config/substack-reader  # Linux"
 	@echo "  rm -rf ~/Library/Application\\ Support/substack-reader  # macOS"
 
-# Clean only session file (for security)
-clean-session:
+clean-session: ## Remove only the session file (for security)
 	@echo "Removing session file..."
 	@if [ -n "$$SUBSTACK_SESSION_FILE" ]; then \
 		rm -f "$$SUBSTACK_SESSION_FILE" && echo "✓ Removed: $$SUBSTACK_SESSION_FILE"; \
@@ -162,26 +119,48 @@ clean-session:
 		echo "Session file location unknown - remove manually"; \
 	fi
 
-# Run auth command
-run-auth: build
+# Test & Lint targets
+.PHONY: test vet clean
+test: ## Run tests
+	$(GOTEST) -v ./$(INTERNAL_DIR)/...
+
+vet: ## Run go vet
+	$(GOVET) ./...
+
+clean: ## Clean build artifacts
+	rm -rf $(BINARY_DIR)
+	@echo "✓ Cleaned build artifacts"
+
+# Run targets (require session)
+.PHONY: run-auth run-inbox run-search run-article
+run-auth: build ## Run auth command
 	./$(BUILD_LOCAL) auth
 
-# Run inbox command
-run-inbox: build
+run-inbox: build ## Run inbox command
 	./$(BUILD_LOCAL) inbox
 
-# Run search command
-run-search: build
+run-search: build ## Run search command with test query
 	./$(BUILD_LOCAL) search -query "test"
 
-# Run article command
-run-article: build
+run-article: build ## Run article command (requires valid post-id)
 	./$(BUILD_LOCAL) article -post-id 123456
 
-# Download dependencies
-deps:
+# Dependency targets
+.PHONY: deps tidy
+deps: ## Download dependencies
 	$(GOGET) ./...
 
-# Tidy go.mod
-tidy:
+tidy: ## Tidy go.mod
 	$(GOMOD) tidy
+
+# Environment targets
+.PHONY: env-init env-edit
+env-init: ## Create .env file from .env.example
+	@if [ ! -f .env ]; then \
+		cp .env.example .env && echo "✓ Created .env from .env.example"; \
+	else \
+		echo ".env already exists"; \
+	fi
+
+env-edit: ## Edit .env file
+	@$(EDITOR) .env
