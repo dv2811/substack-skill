@@ -15,25 +15,7 @@ cd substack-skill
 ./tool_build.sh <tool-name>
 ```
 
-### Install as AI Skill
-
-To use tools with AI assistants that support skills:
-
-**Claude Code:**
-```bash
-cp tools/<tool-name>/SKILL.md ~/.claude/skills/<tool-name>/SKILL.md
-```
-
-**Qwen Code:**
-```bash
-cp tools/<tool-name>/SKILL.md ~/.qwen/skills/<tool-name>/SKILL.md
-qwen --experimental-skills
-```
-
-**OpenClaw:**
-```bash
-openclaw skill install dv2811/substack-skill
-```
+Copy the tool's SKILL.md to your AI assistant's skills directory:
 
 ## Project Structure
 
