@@ -14,7 +14,7 @@ Part of the **entext-research-tool** skill suite.
 git clone https://github.com/dv2811/substack-skill.git
 cd substack-skill
 
-# Build the tool (creates binary in ./bin/)
+# Build and install the tool
 ./tool_build.sh substack-reader
 ```
 
@@ -25,22 +25,13 @@ cd tools/substack-reader
 ./setup.sh
 ```
 
-**Note:** Run `tool_build.sh` from the project root directory, not from the skill directory.
-
-## Binary Location
-
-After installation, the `substack` binary is located at:
-
-- **Project root:** `<project-root>/bin/substack`
-- **Add to PATH:** `export PATH=$PATH:$(pwd)/bin`
+After installation, `substack` is available in your PATH.
 
 ## Authentication
 
 **First-time setup:**
 
 ```bash
-./bin/substack auth
-# Or if ./bin is in PATH:
 substack auth
 ```
 
@@ -58,7 +49,7 @@ Session persists across CLI invocations and auto-refreshes.
 Authenticate with Substack via email link.
 
 ```bash
-./bin/substack auth
+substack auth
 ```
 
 ### inbox
@@ -66,8 +57,8 @@ Authenticate with Substack via email link.
 Get chronological inbox posts.
 
 ```bash
-./bin/substack inbox
-./bin/substack inbox -after "2024-01-01T00:00:00.000Z"
+substack inbox
+substack inbox -after "2024-01-01T00:00:00.000Z"
 ```
 
 ### article
@@ -75,7 +66,7 @@ Get chronological inbox posts.
 Get article content by post ID.
 
 ```bash
-./bin/substack article -post-id 123456
+substack article -post-id 123456
 ```
 
 ### search
@@ -83,9 +74,9 @@ Get article content by post ID.
 Search Substack posts.
 
 ```bash
-./bin/substack search -query "AI" -mode top
-./bin/substack search -query "tech" -mode all
-./bin/substack search -query "news" -mode subscribed
+substack search -query "AI" -mode top
+substack search -query "tech" -mode all
+substack search -query "news" -mode subscribed
 ```
 
 **Search Modes:**
@@ -97,58 +88,53 @@ Search Substack posts.
 
 ```bash
 # Get inbox and extract titles
-./bin/substack inbox | jq '.data.posts[] | .title'
+substack inbox | jq '.data.posts[] | .title'
 
 # Search and get article
-POST_ID=$(./bin/substack search -query "AI" -mode top | jq '.data.results[0].id')
-./bin/substack article -post-id $POST_ID
+POST_ID=$(substack search -query "AI" -mode top | jq '.data.results[0].id')
+substack article -post-id $POST_ID
 
 # Count posts in inbox
-./bin/substack inbox | jq '.data.posts | length'
+substack inbox | jq '.data.posts | length'
 ```
 
 ## Managing Large Outputs
 
-Search results and article content can be large. Pipe to files to reduce context load:
+Article content and search results can be large. Pipe to files for processing:
 
 ```bash
-# Article by ID - use post_id for unique filename
-./bin/substack article -post-id 191095022 > substack_article_191095022.json
+# Article by ID
+substack article -post-id 191095022 > article_191095022.json
 
-# Search - use query terms + timestamp
-./bin/substack search -query "openclaw china" > substack_search_openclaw_china_$(date +%Y%m%d).json
+# Search with query terms + timestamp
+substack search -query "openclaw china" > search_openclaw_china_$(date +%Y%m%d).json
 
-# Inbox - use command + date
-./bin/substack inbox > substack_inbox_$(date +%Y%m%d).json
+# Inbox with date
+substack inbox > inbox_$(date +%Y%m%d).json
 
-# Process file later with jq
-jq '.data.post.title' substack_article_191095022.json
-jq '.data.results[] | {title, id}' substack_search_openclaw_china_$(date +%Y%m%d).json
+# Process file later
+jq '.data.post.title' article_191095022.json
+jq '.data.results[] | {title, id}' search_openclaw_china_$(date +%Y%m%d).json
 ```
 
-**Why pipe to files?**
-- Reduces context token usage when working with large result sets
-- Allows incremental processing of search results
-- Enables re-processing without re-fetching from API
-
 **Filename conventions:**
-- Include unique ID when available: `substack_article_191095022.json`
-- Include query terms for searches: `substack_search_<query>_<date>.json`
-- Use dated filenames for recurring commands: `substack_inbox_YYYYMMDD.json`
+- Include unique ID when available: `article_191095022.json`
+- Include query terms for searches: `search_<query>_<date>.json`
+- Use dated filenames for recurring commands: `inbox_YYYYMMDD.json`
 
 ## Output Format
 
-All commands output JSON to stdout for piping to `jq` or files:
+Commands output JSON to stdout for piping to `jq` or files:
 
 ```bash
 # Pretty print
-./bin/substack inbox | jq '.data.posts[] | {title, post_date}'
+substack inbox | jq '.data.posts[] | {title, post_date}'
 
 # Extract search titles
-./bin/substack search -query "AI" | jq '.data.results[].title'
+substack search -query "AI" | jq '.data.results[].title'
 
 # Save to file
-./bin/substack inbox > inbox_$(date +%Y%m%d).json
+substack inbox > inbox_$(date +%Y%m%d).json
 ```
 
 ## Session Location
@@ -160,17 +146,31 @@ All commands output JSON to stdout for piping to `jq` or files:
 ## Troubleshooting
 
 **Command not found:**
-```bash
-# If `substack` command is not found, use the full path:
-./bin/substack <command>
 
-# Or add ./bin to your PATH:
-export PATH=$PATH:$(pwd)/bin
+The `substack` binary should be in your PATH after installation. Check platform-specific locations:
+
+- **macOS:** `$HOME/bin/substack`
+- **Linux:** `$HOME/.local/bin/substack`
+- **Windows:** `%LOCALAPPDATA%\Programs\substack-reader\substack.exe`
+
+Add to PATH if needed:
+```bash
+# macOS
+export PATH=$PATH:$HOME/bin
+
+# Linux
+export PATH=$PATH:$HOME/.local/bin
+```
+
+Or use the full path:
+```bash
+$HOME/bin/substack <command>  # macOS
+$HOME/.local/bin/substack <command>  # Linux
 ```
 
 **Permission denied:**
 ```bash
-chmod +x ./bin/substack
+chmod +x $(which substack)
 ```
 
 ## Requirements

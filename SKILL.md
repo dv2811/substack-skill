@@ -14,18 +14,11 @@ Research tool for accessing external content platforms via command line.
 git clone https://github.com/dv2811/substack-skill.git
 cd substack-skill
 
-# Build a tool
+# Build and install a tool
 ./tool_build.sh <tool-name>
 ```
 
-**Note:** Run `tool_build.sh` from the project root directory.
-
-## Binary Location
-
-After installation, binaries are located at:
-
-- **Project root:** `<project-root>/bin/<tool-name>`
-- **Add to PATH:** `export PATH=$PATH:$(pwd)/bin`
+This installs the tool to your platform-specific binary directory and adds it to PATH.
 
 ## Available Tools
 
@@ -35,20 +28,20 @@ After installation, binaries are located at:
 
 ## Managing Large Outputs
 
-All tools output JSON to stdout. Pipe to files for large results:
+Tools may produce large outputs. Pipe to files for processing:
 
 ```bash
 # General pattern
-./bin/<tool> <command> [args] > <tool>_<command>_<date>.json
+<tool> <command> [args] > <tool>_<command>_<identifier>_<date>.txt
 
-# Process with jq later
-jq '.data' <tool>_<command>_<date>.json
+# Append for incremental results
+<tool> <command> [args] >> <tool>_<command>_<date>.txt
 ```
 
 **Filename conventions:**
-- Include unique ID when available: `<tool>_item_123456.json`
-- Include query terms for searches: `<tool>_search_<query>_<date>.json`
-- Use dated filenames for recurring commands: `<tool>_inbox_YYYYMMDD.json`
+- Include unique ID when available: `<tool>_item_123456.txt`
+- Include query terms for searches: `<tool>_search_<query>_<date>.txt`
+- Use dated filenames for recurring commands: `<tool>_inbox_YYYYMMDD.txt`
 
 ## Session Locations
 
@@ -61,17 +54,20 @@ Tools store sessions in platform-specific config directories:
 ## Troubleshooting
 
 **Command not found:**
-```bash
-# Use full path:
-./bin/<tool> <command>
 
-# Or add ./bin to PATH:
-export PATH=$PATH:$(pwd)/bin
-```
+The tool should be in your PATH after installation. Check platform-specific locations:
 
-**Permission denied:**
+- **macOS:** `$HOME/bin/<tool>`
+- **Linux:** `$HOME/.local/bin/<tool>`
+- **Windows:** `%LOCALAPPDATA%\Programs\<tool-name>\<tool>.exe`
+
+Add to PATH if needed:
 ```bash
-chmod +x ./bin/<tool>
+# macOS
+export PATH=$PATH:$HOME/bin
+
+# Linux  
+export PATH=$PATH:$HOME/.local/bin
 ```
 
 ## Requirements
