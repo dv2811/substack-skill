@@ -15,12 +15,6 @@ cd substack-skill
 ./tool_build.sh <tool-name>
 ```
 
-Example:
-
-```bash
-./tool_build.sh substack-reader
-```
-
 ## Install as AI Skill
 
 ### Claude Code
@@ -60,4 +54,12 @@ entext-research-tool/
 
 ## Available Tools
 
-- **substack-reader** - Substack CLI tool (see `tools/substack-reader/README.md`)
+| Tool | Description | Documentation |
+|------|-------------|---------------|
+| `substack-reader` | Substack inbox, articles, search | `tools/substack-reader/README.md` |
+
+## Tool-Specific Documentation
+
+See individual tool directories for detailed usage:
+
+- **substack-reader:** `tools/substack-reader/README.md`, `tools/substack-reader/SKILL.md`
