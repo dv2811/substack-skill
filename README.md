@@ -1,41 +1,31 @@
 # Substack Skill
 
-Go-based tools and libraries for accessing Substack reader data.
+Go-based tools for accessing external services.
 
 ## Project Structure
 
 ```
 substack-skill/
 ├── internal/
-│   └── substack/          # Core Substack API client
+│   └── <service>/         # Service API clients
 ├── tools/
-│   └── substack-reader/   # CLI tool
-│       ├── setup.sh       # Installation script
-│       └── README.md      # Tool documentation
+│   ├── <tool-name>/       # CLI tools (one per directory)
+│   │   ├── setup.sh       # Installation script
+│   │   ├── README.md      # Tool documentation
+│   │   └── src/           # Source code
+│   └── ...                # Add more tools here
 ├── go.mod
 └── README.md
 ```
 
-## Components
+## Tools
 
-### Internal Substack Package
+- **substack-reader** - Substack CLI tool (see `tools/substack-reader/README.md`)
 
-The `internal/substack` package provides Go APIs for interacting with Substack:
+## Installation
 
-- HTTP client with authentication
-- Session management
-- Inbox retrieval
-- Search functionality
+Use the build script to install tools:
 
-### CLI Tool
-
-See [`tools/substack-reader/README.md`](tools/substack-reader/README.md) for installation and usage documentation.
-
-## Library Usage
-
-```go
-import "entext-applications/internal/substack"
-
-client := substack.NewClient()
-session, err := substack.NewSessionFromFile("~/.config/substack-reader/session.json")
+```bash
+./tool_build.sh <tool-name>
 ```
