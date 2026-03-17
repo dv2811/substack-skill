@@ -152,15 +152,3 @@ deps: ## Download dependencies
 
 tidy: ## Tidy go.mod
 	$(GOMOD) tidy
-
-# Environment targets
-.PHONY: env-init env-edit
-env-init: ## Create .env file from .env.example
-	@if [ ! -f .env ]; then \
-		cp .env.example .env && echo "✓ Created .env from .env.example"; \
-	else \
-		echo ".env already exists"; \
-	fi
-
-env-edit: ## Edit .env file
-	@$(EDITOR) .env
