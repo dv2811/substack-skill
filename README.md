@@ -15,20 +15,22 @@ cd substack-skill
 ./tool_build.sh <tool-name>
 ```
 
-## Install as AI Skill
+### Install as AI Skill
 
-### Claude Code
+To use tools with AI assistants that support skills:
 
-Automatically discovers `SKILL.md` from repository.
-
-### Qwen Code
-
+**Claude Code:**
 ```bash
+cp tools/<tool-name>/SKILL.md ~/.claude/skills/<tool-name>/SKILL.md
+```
+
+**Qwen Code:**
+```bash
+cp tools/<tool-name>/SKILL.md ~/.qwen/skills/<tool-name>/SKILL.md
 qwen --experimental-skills
 ```
 
-### OpenClaw
-
+**OpenClaw:**
 ```bash
 openclaw skill install dv2811/substack-skill
 ```
@@ -37,7 +39,7 @@ openclaw skill install dv2811/substack-skill
 
 ```
 entext-research-tool/
-├── SKILL.md               # AI skill definition
+├── SKILL.md               # Root skill definition
 ├── manifest.json          # OpenClaw permission manifest
 ├── internal/
 │   └── <service>/         # Service API clients
