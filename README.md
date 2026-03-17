@@ -209,7 +209,3 @@ substack article -post-id $POST_ID | jq '.data.post.body_html'
 ```bash
 substack inbox > inbox_$(date +%Y%m%d).json
 ```
-
-## License
-
-This project is for personal use and educational purposes.
