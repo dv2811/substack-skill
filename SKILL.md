@@ -36,7 +36,7 @@ CLI tool for accessing Substack reader data.
 # Install
 ./tool_build.sh substack-reader
 
-# Authenticate
+# Authenticate (required first step)
 substack auth
 
 # Get inbox posts

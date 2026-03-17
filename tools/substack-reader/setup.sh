@@ -24,7 +24,6 @@ else
     BINARY_DIR="$HOME/.local/bin"
 fi
 
-SESSION_FILE="$CONFIG_DIR/session.json"
 BIN_FILE="$BINARY_DIR/substack"
 
 # Create directories
@@ -67,39 +66,6 @@ else
     echo "  1. Download pre-built binary from releases"
     echo "  2. Install Go from https://go.dev/dl/"
     exit 1
-fi
-
-# Create session file
-if [ -f "$SESSION_FILE" ]; then
-    echo "✓ Session exists: $SESSION_FILE"
-else
-    echo "Enter Substack credentials:"
-    echo "(Session stored at: $SESSION_FILE)"
-    echo ""
-    read -p "Email: " EMAIL
-    read -s -p "Password: " PASS
-    echo ""
-
-    if [ -z "$EMAIL" ]; then
-        echo "Error: Email is required"
-        exit 1
-    fi
-
-    # Create initial session file with email (password login or email link flow)
-    # Use platform-compatible date format
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS BSD date
-        TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    else
-        # GNU date (Linux)
-        TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)"
-    fi
-    echo "{\"user_email\":\"$EMAIL\",\"headers\":{},\"ckv\":{},\"last_update\":\"$TIMESTAMP\",\"expiry\":\"\"}" > "$SESSION_FILE"
-    chmod 600 "$SESSION_FILE"
-    echo "✓ Session created"
-    echo ""
-    echo "Note: You may need to complete authentication via email link."
-    echo "Check your email for a login link from Substack."
 fi
 
 # Copy SKILL.md for AI assistants (Gemini, Qwen, Claude Code)
@@ -154,6 +120,9 @@ fi
 echo ""
 echo "================================"
 echo "Setup complete!"
+echo ""
+echo "Next step: Authenticate with Substack"
+echo "  substack auth"
 echo ""
 echo "Usage:"
 if [[ ":$PATH:" == *":$BINARY_DIR:"* ]]; then
