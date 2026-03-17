@@ -1,6 +1,8 @@
 # Substack Skill - Build and Development Commands
 # Delegates to tool_build.sh for all tool operations
 
+-include .env
+
 TOOL_BUILD := ./tool_build.sh
 
 .PHONY: help
