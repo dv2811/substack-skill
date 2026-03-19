@@ -1,5 +1,3 @@
-// Koyfin CLI tools - replicates MCP tools as command-line utilities
-// Usage: koyfin <command> [flags]
 package main
 
 import (
