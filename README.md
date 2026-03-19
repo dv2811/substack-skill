@@ -41,10 +41,12 @@ entext-research-tools/
 
 | Tool | Description | Documentation |
 |------|-------------|---------------|
-| `substack-reader` | Substack inbox, articles, search | `tools/substack-reader/README.md` |
+| `substack` | Substack inbox, articles, search | `tools/substack/README.md` |
+| `koyfin` | Tool for interacting with Koyfin | `tools/koyfin/README.md` |
 
 ## Tool-Specific Documentation
 
 See individual tool directories for detailed usage:
 
-- **substack-reader:** `tools/substack-reader/README.md`
+- **substack:** `tools/substack/README.md`
+- **koyfin:** `tools/koyfin/README.md`

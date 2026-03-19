@@ -5,30 +5,43 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Tool-specific configuration
-TOOL_NAME="koyfin"
-BINARY_NAME="koyfin"
+TOOL_NAME="substack-reader"
+BINARY_NAME="substack"
 
 # Binary and session file directory: <tool_name>/scripts/
 BINARY_DIR="$SCRIPT_DIR/scripts"
 BIN_FILE="$BINARY_DIR/$BINARY_NAME"
 
 echo "$TOOL_NAME CLI Tools Setup"
-echo "======================"
+echo "================================"
 echo ""
 
 # Create directories
 mkdir -p "$BINARY_DIR"
 
-# Check for pre-built binary
-if [ -f "$PROJECT_ROOT/bin/koyfin" ]; then
-    echo "✓ Found pre-built binary"
-    cp "$PROJECT_ROOT/bin/koyfin" "$BIN_FILE"
+# Determine target OS and binary name
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    TARGET_OS="darwin"
+    BIN_NAME="$BINARY_NAME"
+elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+    TARGET_OS="windows"
+    BIN_NAME="$BINARY_NAME.exe"
+else
+    TARGET_OS="linux"
+    BIN_NAME="$BINARY_NAME"
+fi
+
+# Check for pre-built binary (platform-specific)
+if [ -f "$PROJECT_ROOT/bin/$TARGET_OS/$BIN_NAME" ]; then
+    echo "✓ Found pre-built binary for $TARGET_OS"
+    cp "$PROJECT_ROOT/bin/$TARGET_OS/$BIN_NAME" "$BIN_FILE"
     chmod +x "$BIN_FILE"
     echo "✓ Installed: $BIN_FILE"
 elif command -v go &> /dev/null; then
     echo "Building from source..."
     echo "✓ Go: $(go version)"
-    go build -o "$BIN_FILE" "$SCRIPT_DIR/src/"
+    echo "✓ Target OS: $TARGET_OS"
+    GOOS="$TARGET_OS" go build -o "$BIN_FILE" "$SCRIPT_DIR/src/"
     chmod +x "$BIN_FILE"
     echo "✓ Built: $BIN_FILE"
 else
@@ -40,27 +53,9 @@ else
     exit 1
 fi
 
-# Copy Python utilities to scripts/ root
-if [ -d "$SCRIPT_DIR/utils" ]; then
-    echo ""
-    echo "Copying Python utilities..."
-    cp "$SCRIPT_DIR/utils/"*.py "$BINARY_DIR/"
-    cp "$SCRIPT_DIR/utils/requirements.txt" "$BINARY_DIR/" 2>/dev/null || true
-    echo "✓ Python utilities: $BINARY_DIR"
-fi
-
-# Detect Python command
-if command -v python3 &> /dev/null; then
-    PYTHON_CMD="python3"
-elif command -v python &> /dev/null; then
-    PYTHON_CMD="python"
-else
-    PYTHON_CMD=""
-fi
-
 # Done
 echo ""
-echo "======================"
+echo "================================"
 echo "Setup complete!"
 echo ""
 echo "Binary and session file location:"
@@ -71,10 +66,3 @@ echo "  $BIN_FILE auth"
 echo ""
 echo "Usage:"
 echo "  $BIN_FILE <command> -h"
-
-if [ -n "$PYTHON_CMD" ]; then
-    echo ""
-    echo "Python utilities:"
-    echo "  $PYTHON_CMD $BINARY_DIR/excel_export.py -h"
-    echo "  $BIN_FILE snapshot -kids <list_of_koyfin_ids> | $PYTHON_CMD $BINARY_DIR/excel_export.py -o snapshot.xlsx"
-fi

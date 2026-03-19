@@ -8,8 +8,8 @@ import (
 	"entext-applications/internal/substack"
 )
 
-func runArticleHelp() {
-	fmt.Println(`Get article content by post ID.
+const articleHelp = `
+Get article content by post ID.
 
 Usage: substack article [flags]
 
@@ -18,16 +18,21 @@ Flags:
         Post ID to retrieve content for (required)
   -base-url string
         Custom Substack domain (optional, e.g., 'substack.com')
+  -compact-mode boolean
+        compact content mode. (optional, default: false)
 
 Examples:
   substack article -post-id 123456
-  substack article -post-id 123456 -base-url "substack.com"`)
-}
+  substack article -post-id 123456 -base-url "substack.com"`
 
 func runArticle(client *substack.Client, session *substack.Session, args []string) {
+	// check valid session before authenticate
+	checkValidSession(session)
+
 	fs := newFlagSet("article")
 	postID := fs.Uint("post-id", 0, "Post ID to retrieve content for (required)")
 	baseURL := fs.String("base-url", "", "Custom Substack domain (optional, e.g., 'substack.com')")
+	compactMode := fs.Bool("compact-mode", false, "compact content mode")
 
 	if err := fs.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
@@ -40,19 +45,14 @@ func runArticle(client *substack.Client, session *substack.Session, args []strin
 		os.Exit(1)
 	}
 
-	article, err := client.GetArticleContent(session, uint32(*postID), *baseURL)
+	article, err := client.GetArticleContent(session, &substack.PostContentRequest{
+		BaseURL: *baseURL,
+		PostID:  uint32(*postID),
+		CmpMode: *compactMode,
+	})
 	if err != nil {
 		exitWithError(err)
 	}
 
 	printJSON(map[string]any{"data": article})
-}
-
-// Helper function to convert string to uint32
-func parsePostID(idStr string) (uint32, error) {
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		return 0, err
-	}
-	return uint32(id), nil
 }

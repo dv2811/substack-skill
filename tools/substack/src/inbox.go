@@ -1,9 +1,11 @@
 package main
+
 import (
+	"entext-applications/internal/substack"
 	"fmt"
 	"os"
-	"entext-applications/internal/substack"
 )
+
 const InboxCmdHelp = `
 Get chronological inbox posts.
 Usage: substack inbox [flags]
@@ -13,13 +15,11 @@ Examples:
 	substack inbox
 	substack inbox -after "2024-01-01T00:00:00.000Z"`
 
-// print help message for inbox command
-func runInboxHelp() {
-	fmt.Println(InboxCmdHelp)
-}
-
 // command line implementation for list Substack inbox feed
 func runInbox(client *substack.Client, session *substack.Session, args []string) {
+	// check valid session before authenticate
+	checkValidSession(session)
+
 	fs := newFlagSet("inbox")
 	after := fs.String("after", "", "Timestamp cursor for pagination (RFC3339 format)")
 

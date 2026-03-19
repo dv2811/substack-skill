@@ -5,55 +5,52 @@ import (
 	"os"
 
 	"entext-applications/internal/koyfin"
+	"entext-applications/internal/validator"
 )
 
 func runTickerData(client *koyfin.Client, session *koyfin.Session, args []string) {
+	var (
+		id, key, dateFrom, dateTo, aggPeriod, priceFormat, finPeriod, currency string
+	)
 	fs := newFlagSet("ticker-data")
-	id := fs.String("kid", "", "Koyfin ID for the ticker (required)")
-	key := fs.String("key", "", "Indicator key to search for (required)")
-	dateFrom := fs.String("date-from", "", "Start date in YYYY-MM-DD format (required)")
-	dateTo := fs.String("date-to", "", "End date in YYYY-MM-DD format (optional, defaults to today)")
-	currency := fs.String("currency", "USD", "Data currency (default: USD)")
-	aggPeriod := fs.String("agg-period", "day", "Series granularity: day, monthly, quarterly, annually")
-	priceFormat := fs.String("price-format", "", "Price format: both, standard, adj (auto-set based on key)")
-	finPeriod := fs.String("fin-period", "", "Financial period: quarterly, annual, LTM")
+	fs.StringVar(&id, "kid", "", "Koyfin ID for the ticker (required)")
+	fs.StringVar(&key, "key", "", "Indicator key to search for (required)")
+	fs.StringVar(&dateFrom, "date-from", "", "Start date in YYYY-MM-DD format (required)")
+	fs.StringVar(&dateTo, "date-to", "", "End date in YYYY-MM-DD format (optional, defaults to today)")
+	fs.StringVar(&currency, "currency", "USD", "Data currency (default: USD)")
+	fs.StringVar(&aggPeriod, "agg-period", "day", "Series granularity: day, monthly, quarterly, annually")
+	fs.StringVar(&priceFormat, "price-format", "", "Price format: both, standard, adj (auto-set based on key)")
+	fs.StringVar(&finPeriod, "fin-period", "", "Financial period: quarterly, annual, LTM")
 
 	if err := fs.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
 		os.Exit(1)
 	}
 
-	if *id == "" {
-		fmt.Fprintf(os.Stderr, "Error: -id flag is required\n")
-		fs.Usage()
-		os.Exit(1)
-	}
+	v := validator.New()
+	v.Check(id != "", "id", "id must not be empty")
+	v.Check(key != "", "key", "key must not be empty")
+	v.Check(dateFrom != "", "dateFrom", "dateFrom must not be empty")
 
-	if *key == "" {
-		fmt.Fprintf(os.Stderr, "Error: -key flag is required\n")
-		fs.Usage()
-		os.Exit(1)
-	}
-
-	if *dateFrom == "" {
-		fmt.Fprintf(os.Stderr, "Error: -date-from flag is required\n")
-		fs.Usage()
-		os.Exit(1)
+	if !v.Valid() {
+		for k, v := range v.Errors {
+			fmt.Fprintf(os.Stderr, "%s: %s", k, v)
+		}
 	}
 
 	req := koyfin.TickerDataRequest{
-		ID:        *id,
-		Key:       *key,
-		Currency:  *currency,
-		DateFrom:  *dateFrom,
-		DateTo:    *dateTo,
-		AggPeriod: *aggPeriod,
-		FinPeriod: *finPeriod,
+		ID:        id,
+		Key:       key,
+		Currency:  currency,
+		DateFrom:  dateFrom,
+		DateTo:    dateTo,
+		AggPeriod: aggPeriod,
+		FinPeriod: finPeriod,
 	}
 
 	// Set price format if explicitly provided
-	if *priceFormat != "" {
-		req.PriceFormat = *priceFormat
+	if priceFormat != "" {
+		req.PriceFormat = priceFormat
 	}
 
 	data, err := client.GetDataSeries(session, req)

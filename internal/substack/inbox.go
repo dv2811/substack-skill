@@ -2,7 +2,6 @@ package substack
 
 import (
 	"bytes"
-	"entext-applications/internal/utils"
 	"fmt"
 	"golang.org/x/net/html"
 	"io"
@@ -10,6 +9,9 @@ import (
 	"slices"
 
 	"github.com/goccy/go-json"
+
+	// "entext.com/internal/validator"
+	"entext-applications/internal/utils"
 )
 
 type Post struct {
@@ -116,16 +118,19 @@ func (c *Client) GetChronologicalInbox(session *Session, lastTimeCursor string) 
 // https://substack.com/app-link/post?publication_id=47580&post_id=186860256
 // https://www.substack.com/api/v1/posts/by-id/145856537
 
-type Article struct {
-	Post Post `json:"post" jsonschema:"The post content"`
+// PostContentRequest provides a more comprehensive way to query for document content
+type PostContentRequest struct {
+	BaseURL string `json:"base_url,omitempty" jsonschema:"base publication URL, if non substack custom domanin is set, optional"`
+	PostID  uint32 `json:"id" jsonschema:"substack post ID retrieved from feed"`
+	CmpMode bool   `json:"compact_mode,omitempty" jsonschema:"compact mode for shortened HTML content. default false. For experimental use only"`
 }
 
-func (c *Client) GetArticleContent(session *Session, postID uint32, baseURL string) (*Article, error) {
+func (c *Client) GetArticleContent(session *Session, req *PostContentRequest) (*Post, error) {
 	var queryURL string
-	if baseURL == "" {
-		queryURL = fmt.Sprintf("https://www.substack.com/api/v1/posts/by-id/%d", postID)
+	if req.BaseURL == "" {
+		queryURL = fmt.Sprintf("https://www.substack.com/api/v1/posts/by-id/%d", req.PostID)
 	} else {
-		queryURL = fmt.Sprintf("https://%s/api/v1/posts/by-id/%d", baseURL, postID)
+		queryURL = fmt.Sprintf("https://%s/api/v1/posts/by-id/%d", req.BaseURL, req.PostID)
 	}
 	headers := map[string][]string{
 		"Accept-Encoding": {"application/json"},
@@ -153,13 +158,20 @@ func (c *Client) GetArticleContent(session *Session, postID uint32, baseURL stri
 	// session refresh - ignore error
 	_ = session.Refresh(resp)
 
-	article := &Article{}
-	err = json.NewDecoder(resp.Body).Decode(article)
+	article := struct {
+		Post Post `json:"post" jsonschema:"content of Substack post"`
+	}{}
+	err = json.NewDecoder(resp.Body).Decode(&article)
 	if err != nil {
 		return nil, err
 	}
-	// article.Post.BodyHTML = reduceHTML(article.Post.BodyHTML)
-	return article, nil
+
+	// experimental compact mode
+	if req.CmpMode {
+		article.Post.BodyHTML = reduceHTML(article.Post.BodyHTML)
+	}
+
+	return &article.Post, nil
 }
 
 var isVoid = map[string]bool{
@@ -220,8 +232,15 @@ func reduceHTML(bodyHTML string) string {
 		}
 
 		rawToken := tkn.Raw()
+
+		// ignore non display elements
+		if bytes.Equal(rawToken, []byte(`<hr>`)) {
+			continue
+		}
 		if bytes.HasPrefix(rawToken, []byte(`<button`)) ||
 			bytes.HasPrefix(rawToken, []byte(`<svg`)) ||
+			bytes.Contains(rawToken, []byte(`data-component-name="ButtonCreateButton"`)) ||
+			bytes.Contains(rawToken, []byte(`data-component-name="SubscribeWidgetToDOM"`)) ||
 			(bytes.HasPrefix(rawToken, []byte(`<div`)) && bytes.Contains(rawToken, []byte(`captioned-image-container`))) {
 			excludeTagDepth = 1
 			continue

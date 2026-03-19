@@ -94,16 +94,8 @@ func (s *Session) Copy(source any) error {
 func (s *Session) LoadFromFile(content io.Reader) error {
 	s.Lock()
 	defer s.Unlock()
-	newSession := &Session{}
-	err := json.NewDecoder(content).Decode(newSession)
-	if err == nil {
-		// asign value for each field to avoid go vet mutex copying complain
-		s.Headers = newSession.Headers
-		s.Cookies = newSession.Cookies
-		s.LastUpdate = newSession.LastUpdate
-		return nil
-	}
-	return err
+
+	return json.NewDecoder(content).Decode(s)
 }
 
 // LoadFromResponse populates session value using http.Response data

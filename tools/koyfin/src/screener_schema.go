@@ -8,8 +8,9 @@ import (
 )
 
 func runScreenerSchema(client *koyfin.Client, session *koyfin.Session, args []string) {
+	var assetType string
 	fs := newFlagSet("screener-schema")
-	assetType := fs.String("asset-type", "Equity", "Asset type (currently only Equity is supported)")
+	fs.StringVar(&assetType, "asset-type", "Equity", "Asset type (currently only Equity is supported)")
 
 	if err := fs.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
@@ -17,7 +18,7 @@ func runScreenerSchema(client *koyfin.Client, session *koyfin.Session, args []st
 	}
 
 	req := koyfin.ScreenerSchemaRequest{
-		AssetType: *assetType,
+		AssetType: assetType,
 	}
 
 	filters := koyfin.GetScreenerSchema(req.AssetType)

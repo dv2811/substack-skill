@@ -1,66 +1,57 @@
 package main
+
 import (
 	"encoding/json"
+	"entext-applications/internal/substack"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
-	"entext-applications/internal/substack"
 )
 
-// getSessionFile returns the path to the session file using XDG conventions
+// getSessionFile returns the path to the session file in the binary's directory
 func getSessionFile() (string, error) {
 	// Check environment variable first (for testing/custom setups)
 	if custom := os.Getenv("SUBSTACK_SESSION_FILE"); custom != "" {
 		return custom, nil
 	}
 
-	var configDir string
-	// XDG Base Directory Specification
-	if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
-		configDir = filepath.Join(xdgConfig, "substack-reader")
-	} else {
-		// Default to ~/.config/substack-reader
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", fmt.Errorf("cannot determine home directory: %w", err)
-		}
-		configDir = filepath.Join(home, ".config", "substack-reader")
+	// Get the directory where the binary is located
+	execPath, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("cannot determine executable path: %w", err)
 	}
-	return filepath.Join(configDir, "session.json"), nil
+	binDir := filepath.Dir(execPath)
+
+	return filepath.Join(binDir, "session.json"), nil
 }
 
 // saveSession saves the current session with updated tokens
 func saveSession(session *substack.Session, sessionFile string) error {
-	// Ensure directory exists
-	dir := filepath.Dir(sessionFile)
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
 	// Save session to file
 	data, err := session.Save()
 	if err != nil {
 		return fmt.Errorf("failed to serialize session: %w", err)
 	}
 
-	if err := os.WriteFile(sessionFile, data, 0600); err != nil {
+	if err := os.WriteFile(sessionFile, data, 0644); err != nil {
 		return fmt.Errorf("failed to save session: %w", err)
 	}
+	return nil
 }
 
 func main() {
 	if len(os.Args) < 2 {
-		printUsage()
+		printUsage(substackToolUsage)
 		os.Exit(1)
 	}
 
 	command := os.Args[1]
 	// Help should work without session
 	if command == "help" || command == "-h" || command == "--help" {
-		printUsage()
+		printUsage(substackToolUsage)
 		os.Exit(0)
 	}
 
@@ -70,13 +61,15 @@ func main() {
 			// Route to command help without session
 			switch command {
 			case "inbox":
-				runInboxHelp()
+				printUsage(InboxCmdHelp)
 			case "article":
-				runArticleHelp()
+				printUsage(articleHelp)
 			case "search":
-				runSearchHelp()
+				printUsage(SearchCmdHelp)
 			case "auth":
-				runAuthHelp()
+				printUsage(authCmdHelp)
+			case "profile":
+				printUsage(profileCmdHelp)
 			}
 			os.Exit(0)
 		}
@@ -85,23 +78,28 @@ func main() {
 	// Initialize Substack client
 	client := substack.NewClient()
 
-	// Load session from XDG config path
+	// Load session from binary directory
 	sessionFile, err := getSessionFile()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error finding session file: %v\n", err)
 		os.Exit(1)
 	}
 
-	session, err := substack.NewSessionFromFile(sessionFile)
-	if err != nil {
-		// auth command: create or renew a session
-		if command == "auth" {
-			session = &substack.Session{}
-		} else {
-			fmt.Fprintf(os.Stderr, "Error loading session: %v\n", err)
-			fmt.Fprintf(os.Stderr, "Run setup script or 'substack auth' to authenticate\n")
-			os.Exit(1)
+	session := &substack.Session{}
+	// Load session if not in initiation flow
+	if command != "profile" {
+		file, err := os.OpenFile(sessionFile, os.O_RDONLY, 0644)
+		if err == nil {
+			err = session.LoadFromFile(file)
+			// no defer just close file explicitly
+			file.Close()
 		}
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading session: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Run 'substack profile -email <email>' then 'substack auth' to authenticate\n")
+		os.Exit(1)
 	}
 
 	// Set up signal handling to save session on interrupt
@@ -131,27 +129,32 @@ func main() {
 		runArticle(client, session, os.Args[2:])
 	case "search":
 		runSearch(client, session, os.Args[2:])
+	case "profile":
+		runProfile(client, session, os.Args[2:])
 	case "auth":
 		runAuth(client, session, os.Args[2:])
 	case "help", "-h", "--help":
-		printUsage()
+		printUsage(substackToolUsage)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", command)
-		printUsage()
+		printUsage(substackToolUsage)
 		os.Exit(1)
 	}
 }
-const toolUsage = `
+
+const substackToolUsage = `
 Substack CLI Tools
 Usage: substack <command> [flags]
 Commands:
-  inbox                   Get chronological inbox posts
-  article                 Get article content by post ID
-  search                  Search posts with different modes
-  auth                    Authenticate with Substack via email link
+  inbox    	Get chronological inbox posts
+  article   Get article content by post ID
+  search    Search posts with different modes
+  profile   Set Substack email address
+  auth      Authenticate with Substack via email link
 
 Examples:
-  substack auth
+  substack profile -email "user@example.com"
+  substack auth -auth_string "https://substack.com/auth?token=..."
   substack inbox
   substack inbox -after "2024-01-01T00:00:00.000Z"
   substack article -post-id 123456
@@ -162,7 +165,7 @@ Examples:
 
 Run 'substack <command> -h' for more information on a command.`
 
-func printUsage() {
+func printUsage(toolUsage string) {
 	fmt.Println(toolUsage)
 }
 
@@ -186,4 +189,13 @@ func exitWithError(err error) {
 func newFlagSet(name string) *flag.FlagSet {
 	fs := flag.NewFlagSet(name, flag.ExitOnError)
 	return fs
+}
+
+// check if the session is valid
+func checkValidSession(session *substack.Session) {
+	// If email not set, prompt for it first
+	if session == nil || session.Email == "" {
+		fmt.Fprintf(os.Stderr, "existing session with valid email must be provided\n")
+		os.Exit(1)
+	}
 }
