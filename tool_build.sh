@@ -16,57 +16,28 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TOOLS_DIR="$SCRIPT_DIR/tools"
 
-show_usage() {
-    echo "Usage: $0 <tool-name> [skills-dir]"
-    echo ""
-    echo "Arguments:"
-    echo "  tool-name   - Name of the tool to build"
-    echo "  skills-dir  - AI skills directory for deployment"
-    echo "                If not provided, will prompt for it"
-    echo ""
-    echo "Available tools:"
-    for dir in "$TOOLS_DIR"/*/; do
-        if [ -d "$dir" ] && [ -f "$dir/setup.sh" ]; then
-            echo "  $(basename "$dir")"
-        fi
-    done
-    echo ""
-    echo "Examples:"
-    echo "  $0 substack /<path-to-ai-tool-config>/skills"
-    echo "  $0 koyfin /<path-to-ai-tool-config>/skills"
-}
-
-list_available_tools() {
-    echo "Available tools:"
-    for dir in "$SCRIPT_DIR"/*/; do
-        if [ -d "$dir" ] && [ -f "$dir/setup.sh" ]; then
-            echo "  $(basename "$dir")"
-        fi
-    done
-}
+# Global platform variables (set by detect_platform)
+TARGET_OS=""
+TARGET_ARCH=""
 
 detect_platform() {
-    local os arch
     case "$OSTYPE" in
-        darwin*)      os="darwin" ;;
-        msys*|win32*) os="windows" ;;
-        *)            os="linux" ;;
+        darwin*)      TARGET_OS="darwin" ;;
+        msys*|win32*) TARGET_OS="windows" ;;
+        *)            TARGET_OS="linux" ;;
     esac
 
-    arch=$(uname -m)
-    case "$arch" in
-        x86_64)        arch="amd64" ;;
-        aarch64|arm64) arch="arm64" ;;
-        armv7l)        arch="arm" ;;
-        i386|i686)     arch="386" ;;
+    case "$(uname -m)" in
+        x86_64)        TARGET_ARCH="amd64" ;;
+        aarch64|arm64) TARGET_ARCH="arm64" ;;
+        armv7l)        TARGET_ARCH="arm" ;;
+        i386|i686)     TARGET_ARCH="386" ;;
+        *)             TARGET_ARCH="amd64" ;;
     esac
-
-    echo "$os $arch"
 }
 
 get_binary_name() {
     local tool_name="$1"
-    local os="$2"
     local name
 
     if [ "$tool_name" = "substack-reader" ]; then
@@ -75,7 +46,7 @@ get_binary_name() {
         name="$tool_name"
     fi
 
-    if [ "$os" = "windows" ]; then
+    if [ "$TARGET_OS" = "windows" ]; then
         name="$name.exe"
     fi
 
@@ -86,69 +57,71 @@ build_tool() {
     local tool_name="$1"
     local tool_dir="$2"
     local skills_dir="$3"
-    local target_os="$4"
-    local target_arch="$5"
 
     local binary_name bin_file
-    binary_name=$(get_binary_name "$tool_name" "$target_os")
+    binary_name=$(get_binary_name "$tool_name")
     bin_file="$skills_dir/scripts/$binary_name"
 
     if ! command -v go &> /dev/null; then
-        echo "Error: Go is not installed"
-        echo ""
-        echo "Please install Go from https://go.dev/dl/"
+        cat <<EOF
+Error: Go is not installed
+
+Please install Go from https://go.dev/dl/
+EOF
         exit 1
     fi
 
-    echo "Building from source..."
-    echo "✓ Go: $(go version)"
-    echo "✓ Target OS: $target_os"
-    echo "✓ Target Arch: $target_arch"
-    echo "✓ Deploying to: $skills_dir/scripts/"
-    GOOS="$target_os" GOARCH="$target_arch" go build -ldflags='-w -s' -o "$bin_file" "$tool_dir/src/"
+    printf "Building from source...\n"
+    printf "✓ Go: %s\n" "$(go version)"
+    printf "✓ Target OS: %s\n" "$TARGET_OS"
+    printf "✓ Target Arch: %s\n" "$TARGET_ARCH"
+    printf "✓ Deploying to: %s/scripts/\n" "$skills_dir"
+    
+    GOOS="$TARGET_OS" GOARCH="$TARGET_ARCH" go build -ldflags='-w -s' -o "$bin_file" "$tool_dir/src/"
     chmod +x "$bin_file"
-    echo "✓ Built: $bin_file"
+    printf "✓ Built: %s\n" "$bin_file"
 
     cp "$tool_dir/SKILL.md" "$skills_dir"
 
     if [ -d "$tool_dir/utils" ]; then
-        echo "Copying utilities..."
+        printf "Copying utilities...\n"
         cp "$tool_dir/utils/"* "$skills_dir/scripts"
-        echo "✓ Utilities: $skills_dir/scripts/"
+        printf "✓ Utilities: %s/scripts/\n" "$skills_dir"
     fi
 
-    local skill_file="$skills_dir/$tool_name.json"
-    cat > "$skill_file" << EOF
-{
-    "name": "$tool_name",
-    "path": "$skills_dir/scripts",
-    "binary": "$binary_name",
-    "registered": "$(date -Iseconds)"
-}
+    cat <<EOF
+
+================================
+Setup complete!
+
+Tool deployed to: $skills_dir/scripts/
+Session file location: $skills_dir/scripts/session.json
+
+Next step: Authenticate
+  $skills_dir/scripts/$binary_name auth
+
+Usage:
+  $skills_dir/scripts/$binary_name <command> -h
 EOF
+}
 
-    echo ""
-    echo "================================"
-    echo "Setup complete!"
-    echo ""
-    echo "Tool deployed to: $skills_dir/scripts/"
-    echo "Session file location: $skills_dir/scripts/session.json"
-    echo ""
-    echo "Next step: Authenticate"
-    echo "  $skills_dir/scripts/$binary_name auth"
-    echo ""
-    echo "Usage:"
-    echo "  $skills_dir/scripts/$binary_name <command> -h"
+show_usage() {
+    cat <<EOF
+Usage: $0 <tool-name> [skills-dir]
 
-    if [ "$tool_name" = "koyfin" ]; then
-        echo ""
-        echo "Python utilities:"
-        echo "  python3 $skills_dir/scripts/excel_export.py -h"
-        echo "  $skills_dir/scripts/koyfin snapshot -kids <list_of_koyfin_ids> | python3 $skills_dir/scripts/excel_export.py -o snapshot.xlsx"
-    fi
+Arguments:
+  tool-name   - Name of the tool to build
+  skills-dir  - AI skills directory for deployment
+                If not provided, will prompt for it
 
-    echo ""
-    echo "Tool registered: $skill_file"
+Available tools:
+  substack-reader
+  koyfin
+
+Examples:
+  $0 substack /<path-to-ai-tool-config>/skills
+  $0 koyfin /<path-to-ai-tool-config>/skills
+EOF
 }
 
 main() {
@@ -162,35 +135,33 @@ main() {
     local tool_dir="$TOOLS_DIR/$tool_name"
 
     if [ ! -d "$tool_dir" ]; then
-        echo "Error: Tool '$tool_name' not found"
-        echo ""
-        list_available_tools
+        printf "Error: Tool '%s' not found\n\n" "$tool_name"
+        show_usage
         exit 1
     fi
 
     if [ ! -f "$tool_dir/setup.sh" ]; then
-        echo "Error: No setup.sh found for '$tool_name'"
+        printf "Error: No setup.sh found for '%s'\n" "$tool_name"
         exit 1
     fi
 
     if [ -z "$skills_dir" ]; then
-        echo ""
-        echo "Building: $tool_name"
-        echo ""
+        printf "\nBuilding: %s\n\n" "$tool_name"
         read -p "Enter AI skills directory for deployment: " skills_dir
     fi
 
     if [ -z "$skills_dir" ]; then
-        echo "Error: Skills directory is required"
+        printf "Error: Skills directory is required\n"
         exit 1
     fi
 
     skills_dir="$skills_dir/$tool_name"
     mkdir -p "$skills_dir/scripts"
 
-    read -r target_os target_arch <<< "$(detect_platform)"
+    # Detect platform once at startup
+    detect_platform
 
-    build_tool "$tool_name" "$tool_dir" "$skills_dir" "$target_os" "$target_arch"
+    build_tool "$tool_name" "$tool_dir" "$skills_dir"
 }
 
 main "$@"

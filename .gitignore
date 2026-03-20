@@ -32,3 +32,4 @@ Thumbs.db
 
 # Go workspace file
 go.work
+.editorconfig

@@ -22,9 +22,6 @@ Then copy tool-specific SKILL.md to target AI tool's skills directory
 entext-research-tools/
 ├── .claude-plugin/
 │   └── plugin.json        # Plugin manifest (Claude Code, auto-converts for Qwen)
-├── skills/
-│   └── <tool-name>/
-│       └── SKILL.md       # Skill definition
 ├── tools/
 │   ├── <tool-name>/       # CLI tools (one per directory)
 │   │   ├── setup.sh       # Installation script
