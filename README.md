@@ -43,14 +43,22 @@ Download the release archive for your platform from [Releases](https://github.co
 
 **Archive structure:**
 ```
-<tool>-<os>-<arch>.tar.gz
-├── scripts/
-│   └── <tool>         # Binary
-├── SKILL.md           # Documentation
-└── utils/             # Additional utilities (if applicable)
+<os>-<arch>.tar.gz
+├── substack/
+│   ├── scripts/
+│   │   └── substack
+│   └── SKILL.md
+└── koyfin/
+    ├── scripts/
+    │   └── koyfin
+    ├── SKILL.md
+    └── utils/
+        ├── excel_export.py
+        ├── process.py
+        └── requirements.txt
 ```
 
-Extract and copy contents to your AI skills directory.
+Extract and copy the tool directories to your AI skills directory.
 
 ## Project Structure
 
@@ -59,8 +67,6 @@ entext-research-tools/
 ├── .github/
 │   └── workflows/
 │       └── release.yml      # CI/CD for building releases
-├── .claude-plugin/
-│   └── plugin.json          # Plugin manifest
 ├── tools/
 │   ├── <tool-name>/         # CLI tools
 │   │   ├── setup.sh         # Tool-specific messages
