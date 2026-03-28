@@ -34,8 +34,6 @@ type Client struct {
 func NewClient() *Client {
 	client := utils.NewClient()
 	// cookie will be set manually in header, client will be shared across users
-	jar, _ := cookiejar.New(nil)
-	client.Jar = jar
 
 	return &Client{
 		client: client,
