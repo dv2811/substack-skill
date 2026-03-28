@@ -12,14 +12,6 @@ jobs:
   build:
     name: Build Release Binaries
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        tool: [substack, koyfin]
-        include:
-          - tool: substack
-            binary_name: substack
-          - tool: koyfin
-            binary_name: koyfin
 
     steps:
       - name: Checkout code
@@ -33,10 +25,9 @@ jobs:
       - name: Build for all platforms
         id: build
         run: |
-          TOOL_NAME="${{ matrix.tool }}"
-          BINARY_NAME="${{ matrix.binary_name }}"
-          SRC_DIR="tools/${TOOL_NAME}/src"
-          BUILD_DIR="build/${TOOL_NAME}"
+          # Tools to build
+          TOOLS=("substack" "koyfin")
+          BINARY_NAMES=("substack" "koyfin")
 
           # Platform configurations
           PLATFORMS=(
@@ -49,33 +40,41 @@ jobs:
             "windows 386"
           )
 
+          # Build all tools for all platforms
           for platform in "${PLATFORMS[@]}"; do
             read -r os arch <<< "$platform"
+            PLATFORM_DIR="build/${os}-${arch}"
 
-            # Create output directory
-            OUT_DIR="${BUILD_DIR}/${os}/${BINARY_NAME}"
-            mkdir -p "${OUT_DIR}/scripts"
+            for i in "${!TOOLS[@]}"; do
+              TOOL_NAME="${TOOLS[$i]}"
+              BINARY_NAME="${BINARY_NAMES[$i]}"
+              SRC_DIR="tools/${TOOL_NAME}/src"
+              TOOL_DIR="${PLATFORM_DIR}/${TOOL_NAME}"
 
-            # Set binary name
-            if [ "$os" = "windows" ]; then
-              BIN_FILE="${OUT_DIR}/scripts/${BINARY_NAME}.exe"
-            else
-              BIN_FILE="${OUT_DIR}/scripts/${BINARY_NAME}"
-            fi
+              # Create tool directory structure
+              mkdir -p "${TOOL_DIR}/scripts"
 
-            # Build binary from src directory
-            echo "Building ${TOOL_NAME} for ${os}/${arch}..."
-            BIN_PATH="$(pwd)/${BIN_FILE}"
-            (cd "$SRC_DIR" && GOOS="$os" GOARCH="$arch" go build -ldflags='-w -s' -o "$BIN_PATH" ".")
+              # Set binary name
+              if [ "$os" = "windows" ]; then
+                BIN_FILE="${TOOL_DIR}/scripts/${BINARY_NAME}.exe"
+              else
+                BIN_FILE="${TOOL_DIR}/scripts/${BINARY_NAME}"
+              fi
 
-            # Copy SKILL.md
-            cp "tools/${TOOL_NAME}/SKILL.md" "${OUT_DIR}/"
+              # Build binary
+              echo "Building ${TOOL_NAME} for ${os}/${arch}..."
+              BIN_PATH="$(pwd)/${BIN_FILE}"
+              (cd "$SRC_DIR" && GOOS="$os" GOARCH="$arch" go build -ldflags='-w -s' -o "$BIN_PATH" ".")
 
-            # Copy utils if exists
-            if [ -d "tools/${TOOL_NAME}/utils" ]; then
-              mkdir -p "${OUT_DIR}/utils"
-              cp -r "tools/${TOOL_NAME}/utils/"* "${OUT_DIR}/utils/"
-            fi
+              # Copy SKILL.md
+              cp "tools/${TOOL_NAME}/SKILL.md" "${TOOL_DIR}/"
+
+              # Copy utils if exists
+              if [ -d "tools/${TOOL_NAME}/utils" ]; then
+                mkdir -p "${TOOL_DIR}/utils"
+                cp -r "tools/${TOOL_NAME}/utils/"* "${TOOL_DIR}/utils/"
+              fi
+            done
           done
 
           # Create archive for each platform
@@ -83,13 +82,13 @@ jobs:
           mkdir -p "$ARTIFACT_DIR"
           for platform in "${PLATFORMS[@]}"; do
             read -r os arch <<< "$platform"
-            OUT_DIR="${BUILD_DIR}/${os}/${BINARY_NAME}"
-            ARCHIVE_NAME="${TOOL_NAME}-${os}-${arch}"
+            PLATFORM_DIR="build/${os}-${arch}"
+            ARCHIVE_NAME="${os}-${arch}"
 
             if [ "$os" = "windows" ]; then
-              (cd "$OUT_DIR" && zip -r "$ARTIFACT_DIR/${ARCHIVE_NAME}.zip" .)
+              (cd "$PLATFORM_DIR" && zip -r "$ARTIFACT_DIR/${ARCHIVE_NAME}.zip" .)
             else
-              (cd "$OUT_DIR" && tar -czf "$ARTIFACT_DIR/${ARCHIVE_NAME}.tar.gz" .)
+              (cd "$PLATFORM_DIR" && tar -czf "$ARTIFACT_DIR/${ARCHIVE_NAME}.tar.gz" .)
             fi
           done
 
