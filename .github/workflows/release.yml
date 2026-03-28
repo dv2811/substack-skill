@@ -63,9 +63,10 @@ jobs:
               BIN_FILE="${OUT_DIR}/scripts/${BINARY_NAME}"
             fi
 
-            # Build binary
+            # Build binary from src directory
             echo "Building ${TOOL_NAME} for ${os}/${arch}..."
-            GOOS="$os" GOARCH="$arch" go build -ldflags='-w -s' -o "$BIN_FILE" "./${SRC_DIR}/"
+            BIN_PATH="$(pwd)/${BIN_FILE}"
+            (cd "$SRC_DIR" && GOOS="$os" GOARCH="$arch" go build -ldflags='-w -s' -o "$BIN_PATH" ".")
 
             # Copy SKILL.md
             cp "tools/${TOOL_NAME}/SKILL.md" "${OUT_DIR}/"
